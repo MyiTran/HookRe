@@ -31,11 +31,7 @@
     <tr>
       <th>Response Status</th>
       <td>
-        <% if @webhook.response_status.present? %>
-          <span class="badge <%= @webhook.response_status_badge_class %>">Responded <%= @webhook.response_status %></span>
-        <% else %>
-          <span style="color: var(--text-muted); font-size: 0.85rem;">(not recorded)</span>
-        <% end %>
+        <span class="badge <%= @webhook.response_status_badge_class %>"><%= @webhook.response_status_text %></span>
       </td>
     </tr>
     <tr>

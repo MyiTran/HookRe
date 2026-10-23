@@ -13,13 +13,14 @@
                 <span class="badge badge-unconfigured">Unverified</span>
               <% end %>
 
-              <% if webhook.response_status.present? %>
-                <span class="badge <%= webhook.response_status_badge_class %>">Responded <%= webhook.response_status %></span>
-              <% end %>
-
-              <span style="font-size: 0.85rem;"><strong>Received:</strong> <%= webhook.formatted_received_at %></span>
+              <span class="badge <%= webhook.response_status_badge_class %>"><%= webhook.response_status_text %></span>
             </div>
-            <span><%= link_to "View Detail →", webhook_detail_path(webhook), style: "color: var(--primary); text-decoration: none; font-weight: 600;" %></span>
+            <div style="margin-left: auto; flex-shrink: 0; padding-left: 8px;">
+              <%= link_to "View Detail →", webhook_detail_path(webhook), style: "color: var(--primary); text-decoration: none; font-weight: 600; white-space: nowrap;" %>
+            </div>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-color); margin-bottom: 4px;">
+            <strong>Received:</strong> <%= webhook.formatted_received_at %>
           </div>
           <div class="webhook-item-title">
             <% if webhook.event_type.present? %>

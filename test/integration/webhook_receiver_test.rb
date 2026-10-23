@@ -425,7 +425,7 @@ class WebhookReceiverTest < ActionDispatch::IntegrationTest
     end
     assert_select "code", text: "wh_recent_poll"
     assert_select ".badge-sig-verified", text: "Signature verified"
-    assert_select ".badge-status-2xx", text: "Responded 200"
+    assert_select ".badge-status-2xx", text: "Responded 200 OK"
   end
 
   test "changing response mode does not alter existing records" do
@@ -474,8 +474,8 @@ class WebhookReceiverTest < ActionDispatch::IntegrationTest
     # 4. View in root_path and ensure both badges render correctly
     get root_path
     assert_response :success
-    assert_select ".badge-status-2xx", text: "Responded 200"
-    assert_select ".badge-status-5xx", text: "Responded 503"
+    assert_select ".badge-status-2xx", text: "Responded 200 OK"
+    assert_select ".badge-status-5xx", text: "Responded 503 Service Unavailable"
   end
 
   test "GET /webhooks/recent.json returns JSON response" do

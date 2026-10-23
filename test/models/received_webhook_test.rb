@@ -55,27 +55,35 @@ class ReceivedWebhookTest < ActiveSupport::TestCase
   test "response status helper methods" do
     wh_200 = ReceivedWebhook.new(response_status: 200)
     assert_equal "badge-status-2xx", wh_200.response_status_badge_class
-    assert_equal "Responded 200", wh_200.response_status_text
+    assert_equal "Responded 200 OK", wh_200.response_status_text
 
     wh_204 = ReceivedWebhook.new(response_status: 204)
     assert_equal "badge-status-2xx", wh_204.response_status_badge_class
-    assert_equal "Responded 204", wh_204.response_status_text
+    assert_equal "Responded 204 No Content", wh_204.response_status_text
+
+    wh_400 = ReceivedWebhook.new(response_status: 400)
+    assert_equal "badge-status-4xx", wh_400.response_status_badge_class
+    assert_equal "Responded 400 Bad Request", wh_400.response_status_text
 
     wh_401 = ReceivedWebhook.new(response_status: 401)
     assert_equal "badge-status-4xx", wh_401.response_status_badge_class
-    assert_equal "Responded 401", wh_401.response_status_text
+    assert_equal "Responded 401 Unauthorized", wh_401.response_status_text
+
+    wh_429 = ReceivedWebhook.new(response_status: 429)
+    assert_equal "badge-status-4xx", wh_429.response_status_badge_class
+    assert_equal "Responded 429 Too Many Requests", wh_429.response_status_text
 
     wh_500 = ReceivedWebhook.new(response_status: 500)
     assert_equal "badge-status-5xx", wh_500.response_status_badge_class
-    assert_equal "Responded 500", wh_500.response_status_text
+    assert_equal "Responded 500 Internal Server Error", wh_500.response_status_text
 
     wh_503 = ReceivedWebhook.new(response_status: 503)
     assert_equal "badge-status-5xx", wh_503.response_status_badge_class
-    assert_equal "Responded 503", wh_503.response_status_text
+    assert_equal "Responded 503 Service Unavailable", wh_503.response_status_text
 
     wh_none = ReceivedWebhook.new(response_status: nil)
     assert_equal "badge-unconfigured", wh_none.response_status_badge_class
-    assert_nil wh_none.response_status_text
+    assert_equal "Response not recorded", wh_none.response_status_text
   end
 
   test "validates verification_status inclusion" do

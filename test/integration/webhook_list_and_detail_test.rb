@@ -41,8 +41,8 @@ class WebhookListAndDetailTest < ActionDispatch::IntegrationTest
 
     assert_select ".badge-sig-verified", text: "Signature verified"
     assert_select ".badge-sig-invalid", text: "Signature invalid"
-    assert_select ".badge-status-2xx", text: "Responded 200"
-    assert_select ".badge-status-4xx", text: "Responded 401"
+    assert_select ".badge-status-2xx", text: "Responded 200 OK"
+    assert_select ".badge-status-4xx", text: "Responded 401 Unauthorized"
     assert_includes response.body, "GMT+7"
   end
 
@@ -68,7 +68,7 @@ class WebhookListAndDetailTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select ".badge-sig-invalid", text: "Signature invalid"
-    assert_select ".badge-status-4xx", text: "Responded 401"
+    assert_select ".badge-status-4xx", text: "Responded 401 Unauthorized"
     assert_select "td", text: /Message timestamp too old/
     assert_select "code", text: "wh_detail_test"
     assert_select "code", text: "req_detail_test"

@@ -137,6 +137,9 @@
           <%= button_to "200 (>4KB)", response_mode_path(response_mode: "large"), method: :post, class: "btn btn-sm #{@response_mode == 'large' ? 'btn-primary' : 'btn-outline'}" %>
         </div>
       </div>
+      <div class="hint" style="margin-top: 4px; margin-bottom: 8px; font-size: 0.78rem; color: var(--text-muted);">
+        This is the HTTP response HookRe returns to HookYard. 5xx responses make HookYard schedule a retry.
+      </div>
 
       <div class="receiver-status-row" style="margin-top: 8px;">
         <span><strong>Total Received Webhooks:</strong></span>

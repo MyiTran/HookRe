@@ -32,7 +32,14 @@ class ReceivedWebhook < ApplicationRecord
   end
 
   def response_status_text
-    response_status.present? ? "Responded #{response_status}" : nil
+    return "Response not recorded" if response_status.blank?
+
+    reason = Rack::Utils::HTTP_STATUS_CODES[response_status.to_i]
+    if reason.present?
+      "Responded #{response_status} #{reason}"
+    else
+      "Responded #{response_status}"
+    end
   end
 
   def content_type
