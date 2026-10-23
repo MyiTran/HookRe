@@ -1,0 +1,44 @@
+<div data-webhook-count="<%= webhook_count %>">
+  <% if webhooks.present? %>
+    <ul class="webhook-list">
+      <% webhooks.each do |webhook| %>
+        <li class="webhook-item">
+          <div class="webhook-item-header">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <% if webhook.verified? %>
+                <span class="badge badge-sig-verified">Signature verified</span>
+              <% elsif webhook.rejected? %>
+                <span class="badge badge-sig-invalid">Signature invalid</span>
+              <% else %>
+                <span class="badge badge-unconfigured">Unverified</span>
+              <% end %>
+
+              <% if webhook.response_status.present? %>
+                <span class="badge <%= webhook.response_status_badge_class %>">Responded <%= webhook.response_status %></span>
+              <% end %>
+
+              <span style="font-size: 0.85rem;"><strong>Received:</strong> <%= webhook.formatted_received_at %></span>
+            </div>
+            <span><%= link_to "View Detail →", webhook_detail_path(webhook), style: "color: var(--primary); text-decoration: none; font-weight: 600;" %></span>
+          </div>
+          <div class="webhook-item-title">
+            <% if webhook.event_type.present? %>
+              <span class="badge badge-200" style="margin-right: 6px;"><%= webhook.event_type %></span>
+            <% end %>
+            <span>Webhook ID: <code><%= webhook.webhook_id.presence || "(none)" %></code></span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px;">
+            Request ID: <code><%= webhook.request_id.presence || "(none)" %></code> | Content-Type: <code><%= webhook.content_type %></code>
+          </div>
+          <div class="webhook-item-body">
+            <%= webhook.body_preview(120) %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 24px 0;">
+      No webhooks received yet. Send events from HookYard to <code>/webhook</code> to inspect them here.
+    </p>
+  <% end %>
+</div>

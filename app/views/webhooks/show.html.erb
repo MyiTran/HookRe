@@ -1,0 +1,76 @@
+<div style="margin-bottom: 16px;">
+  <%= link_to "← Back to Home", root_path, class: "btn btn-outline btn-sm" %>
+</div>
+
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+    <h2 style="font-size: 1.3rem; font-weight: 700;">Webhook Detail #<%= @webhook.id %></h2>
+    <span style="font-size: 0.85rem; color: var(--text-muted);">
+      Received at: <%= @webhook.formatted_received_at %>
+    </span>
+  </div>
+
+  <table class="detail-table">
+    <tr>
+      <th>Signature Verification</th>
+      <td>
+        <% if @webhook.verified? %>
+          <span class="badge badge-sig-verified">Signature verified</span>
+        <% elsif @webhook.rejected? %>
+          <span class="badge badge-sig-invalid">Signature invalid</span>
+          <% if @webhook.verification_error.present? %>
+            <div style="margin-top: 4px; color: var(--danger-text); font-size: 0.85rem;">
+              <strong>Reason:</strong> <%= @webhook.verification_error %>
+            </div>
+          <% end %>
+        <% else %>
+          <span class="badge badge-unconfigured">Unverified</span>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th>Response Status</th>
+      <td>
+        <% if @webhook.response_status.present? %>
+          <span class="badge <%= @webhook.response_status_badge_class %>">Responded <%= @webhook.response_status %></span>
+        <% else %>
+          <span style="color: var(--text-muted); font-size: 0.85rem;">(not recorded)</span>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th>Webhook ID</th>
+      <td><code><%= @webhook.webhook_id.presence || "(not provided)" %></code></td>
+    </tr>
+    <tr>
+      <th>Request ID</th>
+      <td><code><%= @webhook.request_id.presence || "(not provided)" %></code></td>
+    </tr>
+    <tr>
+      <th>Event Type</th>
+      <td><code><%= @webhook.event_type.presence || "(not provided)" %></code></td>
+    </tr>
+    <tr>
+      <th>Content Type</th>
+      <td><code><%= @webhook.content_type %></code></td>
+    </tr>
+    <tr>
+      <th>Received Timestamp (Vietnam)</th>
+      <td><%= @webhook.formatted_received_at %></td>
+    </tr>
+    <tr>
+      <th>Received Timestamp (UTC)</th>
+      <td><%= @webhook.received_at ? @webhook.received_at.to_fs(:iso8601) : "N/A" %></td>
+    </tr>
+  </table>
+
+  <div style="margin-top: 20px;">
+    <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">Captured Headers</h3>
+    <pre><%= @webhook.headers.present? ? JSON.pretty_generate(@webhook.headers) : "{}" %></pre>
+  </div>
+
+  <div style="margin-top: 20px;">
+    <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 8px;">Raw Request Body</h3>
+    <pre><%= @webhook.body.presence || "(empty body)" %></pre>
+  </div>
+</div>

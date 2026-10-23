@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "HookRe - HookYard E2E Tester" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag "application" %>
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="app-header">
+        <div>
+          <h1><a href="/" style="text-decoration: none; color: inherit;">HookRe - HookYard E2E Tester</a></h1>
+          <div class="tagline">End-to-End webhook testing client and receiver for HookYard</div>
+        </div>
+      </header>
+
+      <% if flash[:notice] %>
+        <div class="flash-notice"><%= flash[:notice] %></div>
+      <% end %>
+      <% if flash[:alert] %>
+        <div class="flash-alert"><%= flash[:alert] %></div>
+      <% end %>
+
+      <%= yield %>
+    </div>
+  </body>
+</html>
