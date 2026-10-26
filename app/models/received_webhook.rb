@@ -2,11 +2,22 @@ class ReceivedWebhook < ApplicationRecord
   serialize :headers, coder: JSON
 
   scope :recent, -> { order(received_at: :desc, id: :desc) }
+  scope :for_route, ->(route_key) {
+    case route_key.to_s.downcase
+    when "success" then where(receiver_path: "/webhooks/success")
+    when "failure" then where(receiver_path: "/webhooks/failure")
+    when "slow"    then where(receiver_path: "/webhooks/slow")
+    when "custom"  then where(receiver_path: "/webhooks/custom")
+    when "default" then where(receiver_path: ["/webhook", nil])
+    else all
+    end
+  }
 
   STATUS_VERIFIED = "verified"
   STATUS_REJECTED = "rejected"
+  STATUS_NOT_VERIFIED = "not_verified"
 
-  validates :verification_status, inclusion: { in: [STATUS_VERIFIED, STATUS_REJECTED] }, allow_nil: true
+  validates :verification_status, inclusion: { in: [STATUS_VERIFIED, STATUS_REJECTED, STATUS_NOT_VERIFIED] }, allow_nil: true
 
   def verified?
     verification_status == STATUS_VERIFIED
@@ -14,6 +25,38 @@ class ReceivedWebhook < ApplicationRecord
 
   def rejected?
     verification_status == STATUS_REJECTED
+  end
+
+  def not_verified?
+    verification_status == STATUS_NOT_VERIFIED || verification_status.blank? || verification_error&.include?("not configured")
+  end
+
+  def signature_status_text
+    if verified?
+      "Verified"
+    elsif rejected? && !verification_error&.include?("not configured")
+      "Invalid signature"
+    else
+      "Not verified"
+    end
+  end
+
+  def signature_status_badge_class
+    if verified?
+      "badge-sig-verified"
+    elsif rejected? && !verification_error&.include?("not configured")
+      "badge-sig-invalid"
+    else
+      "badge-unconfigured"
+    end
+  end
+
+  def delayed?
+    delay_seconds.to_i > 0
+  end
+
+  def display_receiver_path
+    receiver_path.presence || "/webhook"
   end
 
   def formatted_received_at

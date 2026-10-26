@@ -1,50 +1,65 @@
-<div class="grid-2">
-  <!-- LEFT: SEND EVENT CARD -->
-  <section class="card">
-    <h2 class="card-title">Send Event</h2>
+<!-- TOP COLLAPSIBLE: SEND EVENT TO HOOKYARD -->
+<details class="send-event-collapsible" <%= 'open' if @result.present? %>>
+  <summary>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 1rem;">📤</span>
+      <span><strong>Send Event to HookYard</strong></span>
+      <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">(Manual Test Event Dispatcher)</span>
+    </div>
+    <% if @result.present? %>
+      <span class="badge <%= @result.success? ? 'badge-200' : 'badge-500' %>">
+        Last Event: HTTP <%= @result.status_code %>
+      </span>
+    <% else %>
+      <span style="font-size: 0.8rem; color: var(--primary);">Click to expand / collapse ▾</span>
+    <% end %>
+  </summary>
 
+  <div class="send-event-body">
     <%= form_with url: send_event_path, method: :post, local: true do |f| %>
-      <div class="form-group">
-        <%= f.label :hookyard_url, "HookYard API URL" %>
-        <%= f.text_field :hookyard_url, value: @hookyard_url, placeholder: "http://localhost:3000/api/v1/events", class: "form-control" %>
-        <div class="hint">Endpoint where events should be dispatched</div>
-      </div>
-
-      <div class="form-group">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <%= f.label :api_token, "Project API Token", style: "margin-bottom: 0;" %>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="api-key-status" class="badge badge-rejected">Not configured</span>
-            <button type="button" id="clear-api-key-btn" class="btn btn-sm btn-outline" style="display: none; padding: 2px 8px; font-size: 0.75rem; color: var(--danger-text);">Clear key</button>
-          </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 12px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <%= f.label :hookyard_url, "HookYard API URL" %>
+          <%= f.text_field :hookyard_url, value: @hookyard_url, placeholder: "http://localhost:3000/api/v1/events", class: "form-control" %>
+          <div class="hint">Endpoint where events should be dispatched</div>
         </div>
-        <%= f.password_field :api_token, value: "", placeholder: "Enter project API token (saved in sessionStorage)", class: "form-control", id: "project-api-token-input", autocomplete: "off" %>
-        <div class="hint">Sent as <code>Authorization: Bearer &lt;token&gt;</code>. Persisted in this browser tab only (sessionStorage). <strong>Note:</strong> This is your HookYard Project API Token, NOT the Endpoint signing secret.</div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <%= f.label :api_token, "Project API Token", style: "margin-bottom: 0;" %>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="api-key-status" class="badge badge-rejected">Not configured</span>
+              <button type="button" id="clear-api-key-btn" class="btn btn-sm btn-outline" style="display: none; padding: 2px 6px; font-size: 0.7rem; color: var(--danger-text);">Clear key</button>
+            </div>
+          </div>
+          <%= f.password_field :api_token, value: "", placeholder: "Enter project API token (saved in sessionStorage)", class: "form-control", id: "project-api-token-input", autocomplete: "off" %>
+          <div class="hint">Sent as <code>Authorization: Bearer &lt;token&gt;</code>. Kept in tab sessionStorage.</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <%= f.label :event_type, "Event Type" %>
+          <%= f.text_field :event_type, value: @event_type, placeholder: "order.created", class: "form-control" %>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <%= f.label :idempotency_key, "Idempotency Key" %>
+          <%= f.text_field :idempotency_key, value: @idempotency_key, class: "form-control" %>
+        </div>
       </div>
 
-      <div class="form-group">
-        <%= f.label :event_type, "Event Type" %>
-        <%= f.text_field :event_type, value: @event_type, placeholder: "order.created", class: "form-control" %>
-      </div>
-
-      <div class="form-group">
-        <%= f.label :idempotency_key, "Idempotency Key" %>
-        <%= f.text_field :idempotency_key, value: @idempotency_key, class: "form-control" %>
-      </div>
-
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 12px;">
         <%= f.label :payload, "Payload (JSON)" %>
-        <%= f.text_area :payload, value: @payload, rows: 6, class: "form-control code" %>
+        <%= f.text_area :payload, value: @payload, rows: 4, class: "form-control code" %>
         <div class="hint">Must be valid JSON</div>
       </div>
 
       <div>
-        <%= f.submit "Send Event", class: "btn btn-primary", style: "width: 100%;" %>
+        <%= f.submit "Send Event", class: "btn btn-primary" %>
       </div>
     <% end %>
 
     <% if @result.present? %>
-      <div class="response-box <%= @result.success? ? 'success' : 'error' %>">
+      <div class="response-box <%= @result.success? ? 'success' : 'error' %>" style="margin-top: 14px;">
         <div class="response-header">
           <span><%= @result.success? ? "Event Sent Successfully" : "Event Delivery Failed" %></span>
           <% if @result.status_code %>
@@ -66,131 +81,215 @@
         <% end %>
       </div>
     <% end %>
-  </section>
+  </div>
+</details>
 
-  <!-- RIGHT: RECEIVER CARD -->
+<!-- MAIN BALANCED GRID: LEFT = RECEIVER CONFIG, RIGHT = RECEIVED REQUESTS -->
+<div class="main-grid">
+  <!-- LEFT: RECEIVER ROUTES & CONFIGURATION -->
   <section class="card">
-    <h2 class="card-title">Receiver</h2>
+    <h2 class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <span>Receiver Scenarios</span>
+    </h2>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -8px; margin-bottom: 14px;">
+      Each receiver route can return a different response, so one HookYard event can be tested across multiple endpoints.
+    </p>
 
-    <div class="receiver-status-bar">
-      <div class="receiver-status-row">
-        <span><strong>Receiver URL:</strong> <code>/webhook</code></span>
-        <span style="font-size: 0.8rem; color: var(--text-muted);">(e.g. https://example.ngrok-free.app/webhook)</span>
-      </div>
-      <div class="hint" style="margin-bottom: 12px; font-size: 0.78rem; color: var(--text-muted);">
-        HookYard blocks localhost webhook destinations. Use ngrok to forward traffic to port 3001.
-      </div>
-
-      <!-- Signing Secret Configuration Section -->
-      <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
-        <div class="receiver-status-row" style="margin-bottom: 6px;">
-          <span><strong>Endpoint Signing Secret:</strong></span>
-          <% if SigningSecretStore.configured? %>
-            <span class="badge badge-verified">Configured</span>
-          <% else %>
-            <span class="badge badge-rejected">Not configured</span>
-          <% end %>
-        </div>
-
-        <div class="hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
-          Format: <code>whsec_...</code> shown once upon Endpoint creation/rotation in HookYard. Kept in memory only (never saved to database); must be entered again after restarting HookRe.
-        </div>
-
-        <%= form_with url: signing_secret_path, method: :post, local: true, html: { style: "display: flex; gap: 8px; align-items: center;" } do %>
-          <%= password_field_tag :signing_secret, "", placeholder: "Enter whsec_...", class: "form-control", autocomplete: "off", style: "flex: 1;" %>
-          <%= submit_tag "Save Secret", class: "btn btn-sm btn-primary" %>
-        <% end %>
-
+    <!-- Signing Secret Section -->
+    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+      <div class="receiver-status-row" style="margin-bottom: 6px;">
+        <span><strong>Endpoint Signing Secret:</strong></span>
         <% if SigningSecretStore.configured? %>
-          <div style="margin-top: 6px; text-align: right;">
-            <%= button_to "Clear Secret", clear_signing_secret_path, method: :delete, class: "btn btn-sm btn-outline", style: "color: var(--danger-text);" %>
-          </div>
+          <span id="signing-secret-status" class="badge badge-verified badge-sig-verified">Configured</span>
+        <% else %>
+          <span id="signing-secret-status" class="badge badge-rejected badge-unconfigured">Not configured</span>
         <% end %>
       </div>
 
-      <!-- Response Mode Section -->
-      <div class="receiver-status-row">
-        <span><strong>Current Response Mode:</strong></span>
-        <% mode_class = case @response_mode
-           when "200", "204" then "badge-200"
-           when "500", "503" then "badge-500"
-           else "badge-200"
-           end %>
-        <span class="badge <%= mode_class %>">
-          <% case @response_mode
-             when "200" then %>200 OK<%
-             when "204" then %>204 No Content<%
-             when "500" then %>500 Internal Server Error<%
-             when "503" then %>503 Service Unavailable<%
-             when "large" then %>200 OK (>4 KB Body)<%
-             else %><%= @response_mode %><% end %>
-        </span>
+      <div class="hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
+        Format: <code>whsec_...</code> from HookYard. Stored in browser localStorage for persistent local testing.
       </div>
 
-      <div class="receiver-status-row" style="align-items: flex-start; margin-top: 8px;">
-        <span style="margin-top: 4px;"><strong>Set Response Mode:</strong></span>
-        <div class="mode-switcher" style="flex-wrap: wrap; gap: 6px; justify-content: flex-end;">
-          <%= button_to "200 OK", response_mode_path(response_mode: "200"), method: :post, class: "btn btn-sm #{@response_mode == '200' ? 'btn-primary' : 'btn-outline'}" %>
-          <%= button_to "204 No Content", response_mode_path(response_mode: "204"), method: :post, class: "btn btn-sm #{@response_mode == '204' ? 'btn-primary' : 'btn-outline'}" %>
-          <%= button_to "500 Error", response_mode_path(response_mode: "500"), method: :post, class: "btn btn-sm #{@response_mode == '500' ? 'btn-primary' : 'btn-outline'}" %>
-          <%= button_to "503 Unavailable", response_mode_path(response_mode: "503"), method: :post, class: "btn btn-sm #{@response_mode == '503' ? 'btn-primary' : 'btn-outline'}" %>
-          <%= button_to "200 (>4KB)", response_mode_path(response_mode: "large"), method: :post, class: "btn btn-sm #{@response_mode == 'large' ? 'btn-primary' : 'btn-outline'}" %>
-        </div>
-      </div>
-      <div class="hint" style="margin-top: 4px; margin-bottom: 8px; font-size: 0.78rem; color: var(--text-muted);">
-        This is the HTTP response HookRe returns to HookYard. 5xx responses make HookYard schedule a retry.
-      </div>
+      <%= form_with url: signing_secret_path, method: :post, local: true, id: "signing-secret-form", html: { style: "display: flex; gap: 8px; align-items: center;" } do %>
+        <%= password_field_tag :signing_secret, "", id: "signing-secret-input", placeholder: "Enter whsec_...", class: "form-control", autocomplete: "off", style: "flex: 1;" %>
+        <%= submit_tag "Save Secret", class: "btn btn-sm btn-primary" %>
+      <% end %>
 
-      <div class="receiver-status-row" style="margin-top: 8px;">
-        <span><strong>Total Received Webhooks:</strong></span>
-        <span id="total-received-count"><%= @webhook_count %></span>
+      <div style="margin-top: 6px; text-align: right;">
+        <%= button_to "Clear Secret", clear_signing_secret_path, method: :delete, id: "clear-signing-secret-btn", class: "btn btn-sm btn-outline", style: "color: var(--danger-text);" %>
       </div>
     </div>
 
-    <h3 style="font-size: 1.1rem; margin-bottom: 12px; font-weight: 600;">Recent Received Webhooks</h3>
+    <!-- ROUTE SELECTOR TABS -->
+    <div class="route-nav-tabs" role="tablist">
+      <% @receiver_routes.each_with_index do |key, idx| %>
+        <% setting = @route_settings[key] %>
+        <button type="button" class="route-nav-tab <%= 'active' if idx == 0 %>" data-route-tab="<%= key %>">
+          <span><%= setting.route_label.split(" ").first %></span>
+          <span class="badge <%= setting.active_badge_class %>" style="font-size: 0.65rem; padding: 1px 5px;">
+            <%= setting.status_code %>
+          </span>
+          <% if setting.delay_seconds.to_i > 0 %>
+            <span class="badge badge-unconfigured" style="font-size: 0.65rem; padding: 1px 4px;">
+              +<%= setting.delay_seconds %>s
+            </span>
+          <% end %>
+        </button>
+      <% end %>
+    </div>
 
+    <!-- ROUTE CONFIGURATION PANELS -->
+    <% @receiver_routes.each_with_index do |key, idx| %>
+      <% setting = @route_settings[key] %>
+      <div class="route-panel <%= 'active' if idx == 0 %>" id="panel-<%= key %>">
+        <!-- Route URL & Active Banner Box -->
+        <div class="route-endpoint-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+            <div>
+              <span style="font-size: 0.85rem; color: var(--text-muted);">Receiver Route:</span>
+              <strong style="font-size: 0.95rem; margin-left: 4px;"><code><%= setting.route_path %></code></strong>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span class="badge <%= setting.active_badge_class %>"><%= setting.active_status_text %></span>
+              <% if setting.delay_label %>
+                <span class="badge badge-unconfigured"><%= setting.delay_label %></span>
+              <% end %>
+            </div>
+          </div>
+          <div class="hint" style="font-size: 0.78rem;">
+            HookYard destination URL: <code>http://&lt;hookre-host&gt;<%= setting.route_path %></code>
+          </div>
+        </div>
+
+        <!-- Presets -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Status Presets:</div>
+          <div class="preset-buttons">
+            <% [
+                 [200, "200 OK", "badge-status-2xx"],
+                 [400, "400 Bad Request", "badge-status-4xx"],
+                 [408, "408 Request Timeout", "badge-status-4xx"],
+                 [429, "429 Too Many Requests", "badge-status-4xx"],
+                 [500, "500 Internal Server Error", "badge-status-5xx"],
+                 [503, "503 Service Unavailable", "badge-status-5xx"]
+               ].each do |code, label, badge_style| %>
+              <%= button_to label, update_receiver_setting_path(route_key: key, status_code: code),
+                  method: :post,
+                  class: "btn btn-sm #{setting.status_code == code ? 'btn-primary' : 'btn-outline'}",
+                  style: "font-size: 0.8rem; padding: 4px 10px;" %>
+            <% end %>
+          </div>
+        </div>
+
+        <!-- Fine-Grained Route Configuration Form -->
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
+          <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">
+            Configure Response Details for <%= setting.route_label %>
+          </h4>
+
+          <%= form_with url: update_receiver_setting_path, method: :post, local: true do %>
+            <%= hidden_field_tag :route_key, key %>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="status_code_<%= key %>">Custom HTTP Status (100–599)</label>
+                <%= number_field_tag :status_code, setting.status_code, min: 100, max: 599, required: true, id: "status_code_#{key}", class: "form-control" %>
+                <div class="hint">Returns exact HTTP code</div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label for="delay_seconds_<%= key %>">Response Delay (0–60s)</label>
+                <%= number_field_tag :delay_seconds, setting.delay_seconds, min: 0, max: 60, id: "delay_seconds_#{key}", class: "form-control" %>
+                <div class="hint">Delay &gt; 15s triggers HookYard timeout</div>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="response_body_<%= key %>">Response Body (Optional, max 2 KB)</label>
+              <%= text_area_tag :response_body, setting.response_body, rows: 2, maxlength: 2048, id: "response_body_#{key}", placeholder: 'Default: {"received": true}', class: "form-control code" %>
+              <div class="hint">Custom JSON or plain text body to return</div>
+            </div>
+
+            <div style="text-align: right;">
+              <%= submit_tag "Save #{setting.route_label.split(' ').first} Settings", class: "btn btn-sm btn-primary" %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </section>
+
+  <!-- RIGHT: RECEIVED REQUESTS -->
+  <section class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+      <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Recent Requests</h2>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="font-size: 0.85rem; color: var(--text-muted);"><span id="total-received-count"><%= @webhook_count %></span> requests</span>
+        <%= button_to "Clear History", clear_webhooks_history_path, method: :delete,
+            class: "btn btn-sm btn-outline",
+            style: "color: var(--danger-text); padding: 3px 8px; font-size: 0.75rem;",
+            onclick: "return confirm('Are you sure you want to clear the received request history?');" %>
+      </div>
+    </div>
+
+    <!-- FILTER TABS: All, Success, Failure, Slow, Custom -->
+    <div class="filter-tabs">
+      <button type="button" class="filter-tab <%= 'active' if @active_route == 'all' %>" data-route-filter="all">
+        All
+      </button>
+      <button type="button" class="filter-tab <%= 'active' if @active_route == 'success' %>" data-route-filter="success">
+        Success receiver
+      </button>
+      <button type="button" class="filter-tab <%= 'active' if @active_route == 'failure' %>" data-route-filter="failure">
+        Failure receiver
+      </button>
+      <button type="button" class="filter-tab <%= 'active' if @active_route == 'slow' %>" data-route-filter="slow">
+        Slow receiver
+      </button>
+      <button type="button" class="filter-tab <%= 'active' if @active_route == 'custom' %>" data-route-filter="custom">
+        Custom receiver
+      </button>
+    </div>
+
+    <!-- RECEIVED REQUESTS CONTAINER -->
     <div id="recent-webhooks-container">
-      <%= render partial: "webhooks/recent_list", locals: { webhooks: @webhooks, webhook_count: @webhook_count } %>
+      <%= render partial: "webhooks/recent_list", locals: { webhooks: @webhooks, webhook_count: @webhook_count, active_route: @active_route } %>
     </div>
   </section>
 </div>
 
 <script>
   (function() {
-    // Project API Token - Tab Session Persistence
-    const STORAGE_KEY = "hookre_project_api_token";
+    // 1. Project API Token - Tab Session Persistence
+    const TOKEN_STORAGE_KEY = "hookre_project_api_token";
     const tokenInput = document.getElementById("project-api-token-input");
-    const statusBadge = document.getElementById("api-key-status");
-    const clearBtn = document.getElementById("clear-api-key-btn");
+    const tokenStatus = document.getElementById("api-key-status");
+    const clearTokenBtn = document.getElementById("clear-api-key-btn");
 
-    function updateApiKeyUi(hasToken) {
+    function updateTokenUi(hasToken) {
       if (hasToken) {
-        if (statusBadge) {
-          statusBadge.textContent = "Configured";
-          statusBadge.className = "badge badge-verified";
+        if (tokenStatus) {
+          tokenStatus.textContent = "Configured";
+          tokenStatus.className = "badge badge-verified";
         }
-        if (clearBtn) {
-          clearBtn.style.display = "inline-block";
-        }
+        if (clearTokenBtn) clearTokenBtn.style.display = "inline-block";
       } else {
-        if (statusBadge) {
-          statusBadge.textContent = "Not configured";
-          statusBadge.className = "badge badge-rejected";
+        if (tokenStatus) {
+          tokenStatus.textContent = "Not configured";
+          tokenStatus.className = "badge badge-rejected";
         }
-        if (clearBtn) {
-          clearBtn.style.display = "none";
-        }
+        if (clearTokenBtn) clearTokenBtn.style.display = "none";
       }
     }
 
     if (tokenInput) {
       try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
-        if (stored && stored.trim().length > 0) {
-          tokenInput.value = stored;
-          updateApiKeyUi(true);
+        const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+        if (storedToken && storedToken.trim().length > 0) {
+          tokenInput.value = storedToken;
+          updateTokenUi(true);
         } else {
-          updateApiKeyUi(false);
+          updateTokenUi(false);
         }
       } catch (e) {}
 
@@ -198,52 +297,140 @@
         const val = tokenInput.value.trim();
         try {
           if (val.length > 0) {
-            sessionStorage.setItem(STORAGE_KEY, tokenInput.value);
-            updateApiKeyUi(true);
+            sessionStorage.setItem(TOKEN_STORAGE_KEY, tokenInput.value);
+            updateTokenUi(true);
           } else {
-            sessionStorage.removeItem(STORAGE_KEY);
-            updateApiKeyUi(false);
+            sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+            updateTokenUi(false);
           }
         } catch (e) {}
       });
 
-      if (clearBtn) {
-        clearBtn.addEventListener("click", function() {
-          try {
-            sessionStorage.removeItem(STORAGE_KEY);
-          } catch (e) {}
+      if (clearTokenBtn) {
+        clearTokenBtn.addEventListener("click", function() {
+          try { sessionStorage.removeItem(TOKEN_STORAGE_KEY); } catch (e) {}
           tokenInput.value = "";
-          updateApiKeyUi(false);
+          updateTokenUi(false);
         });
       }
 
-      const form = tokenInput.closest("form");
-      if (form) {
-        form.addEventListener("submit", function() {
+      const tokenForm = tokenInput.closest("form");
+      if (tokenForm) {
+        tokenForm.addEventListener("submit", function() {
           if (tokenInput.value) {
-            try {
-              sessionStorage.setItem(STORAGE_KEY, tokenInput.value);
-            } catch (e) {}
+            try { sessionStorage.setItem(TOKEN_STORAGE_KEY, tokenInput.value); } catch (e) {}
           }
         });
       }
     }
 
-    // Recent Webhooks Auto-Refresh Polling
+    // 2. Signing Secret - Persistent localStorage Sync
+    const SIGNING_SECRET_KEY = "hookre_endpoint_signing_secret";
+    const signingInput = document.getElementById("signing-secret-input");
+    const signingStatus = document.getElementById("signing-secret-status");
+    const clearSigningBtn = document.getElementById("clear-signing-secret-btn");
+    const signingForm = document.getElementById("signing-secret-form");
+
+    function updateSigningUi(isConfigured) {
+      if (signingStatus) {
+        if (isConfigured) {
+          signingStatus.textContent = "Configured";
+          signingStatus.className = "badge badge-sig-verified";
+        } else {
+          signingStatus.textContent = "Not configured";
+          signingStatus.className = "badge badge-unconfigured";
+        }
+      }
+    }
+
+    try {
+      const savedSecret = localStorage.getItem(SIGNING_SECRET_KEY);
+      if (savedSecret && savedSecret.trim().length > 0) {
+        if (signingInput) signingInput.value = savedSecret;
+        updateSigningUi(true);
+
+        // If server memory does not currently have the secret, sync in background
+        const serverConfigured = <%= SigningSecretStore.configured? ? 'true' : 'false' %>;
+        if (!serverConfigured) {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+          fetch("<%= signing_secret_path %>", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-CSRF-Token": csrfToken
+            },
+            body: "signing_secret=" + encodeURIComponent(savedSecret)
+          });
+        }
+      }
+    } catch (e) {}
+
+    if (signingForm) {
+      signingForm.addEventListener("submit", function() {
+        if (signingInput && signingInput.value.trim().length > 0) {
+          try {
+            localStorage.setItem(SIGNING_SECRET_KEY, signingInput.value.trim());
+          } catch (e) {}
+        }
+      });
+    }
+
+    if (clearSigningBtn) {
+      clearSigningBtn.addEventListener("click", function() {
+        try {
+          localStorage.removeItem(SIGNING_SECRET_KEY);
+        } catch (e) {}
+        if (signingInput) signingInput.value = "";
+        updateSigningUi(false);
+      });
+    }
+
+    // 3. Receiver Route Selector Tabs (Left Panel)
+    const routeTabs = document.querySelectorAll("[data-route-tab]");
+    routeTabs.forEach(function(tab) {
+      tab.addEventListener("click", function() {
+        const routeKey = tab.getAttribute("data-route-tab");
+        routeTabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+
+        document.querySelectorAll(".route-panel").forEach(p => p.classList.remove("active"));
+        const targetPanel = document.getElementById("panel-" + routeKey);
+        if (targetPanel) targetPanel.classList.add("active");
+      });
+    });
+
+    // 4. Recent Requests Filter Tabs & Polling (Right Panel)
+    let currentRouteFilter = "<%= @active_route %>";
     let lastHtml = null;
 
-    function pollRecentWebhooks() {
+    const filterTabs = document.querySelectorAll("[data-route-filter]");
+    filterTabs.forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        const route = btn.getAttribute("data-route-filter");
+        if (route === currentRouteFilter) return;
+
+        currentRouteFilter = route;
+        filterTabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        fetchRecentWebhooks();
+      });
+    });
+
+    function fetchRecentWebhooks() {
       const container = document.getElementById("recent-webhooks-container");
       if (!container) return;
 
-      fetch("<%= recent_webhooks_path %>", {
+      const url = "<%= recent_webhooks_path %>?route=" + encodeURIComponent(currentRouteFilter);
+
+      fetch(url, {
         headers: {
           "Accept": "text/html",
           "X-Requested-With": "XMLHttpRequest"
         }
       })
-      .then(function(response) {
-        if (response.ok) return response.text();
+      .then(function(res) {
+        if (res.ok) return res.text();
       })
       .then(function(html) {
         if (!html || html === lastHtml) return;
@@ -256,12 +443,10 @@
           totalEl.textContent = countEl.getAttribute("data-webhook-count");
         }
       })
-      .catch(function() {
-        // Silently ignore network failures during background poll
-      });
+      .catch(function() {});
     }
 
-    // Poll every 2 seconds
-    setInterval(pollRecentWebhooks, 2000);
+    // Auto-refresh poll every 2 seconds
+    setInterval(fetchRecentWebhooks, 2000);
   })();
 </script>

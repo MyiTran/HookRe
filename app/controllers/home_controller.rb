@@ -1,4 +1,6 @@
 class HomeController < ApplicationController
+  skip_before_action :verify_authenticity_token, only: [:send_event]
+
   def index
     load_form_defaults
     load_receiver_data
@@ -77,8 +79,14 @@ class HomeController < ApplicationController
   end
 
   def load_receiver_data
+    @receiver_routes = %w[success failure slow custom]
+    @route_settings = @receiver_routes.index_with { |key| ReceiverSetting.for_route(key) }
+    @default_setting = ReceiverSetting.for_route("default")
     @response_mode = ReceiverSetting.current_response_mode
-    @webhooks = ReceivedWebhook.recent.limit(20)
-    @webhook_count = ReceivedWebhook.count
+
+    @active_route = params[:route].presence || "all"
+    @webhooks = ReceivedWebhook.recent.for_route(@active_route).limit(100)
+    @webhook_count = ReceivedWebhook.for_route(@active_route).count
+    @total_webhook_count = ReceivedWebhook.count
   end
 end

@@ -424,7 +424,7 @@ class WebhookReceiverTest < ActionDispatch::IntegrationTest
       assert_equal ReceivedWebhook.count.to_s, elements.first["data-webhook-count"]
     end
     assert_select "code", text: "wh_recent_poll"
-    assert_select ".badge-sig-verified", text: "Signature verified"
+    assert_select ".badge-sig-verified", text: "Verified"
     assert_select ".badge-status-2xx", text: "Responded 200 OK"
   end
 

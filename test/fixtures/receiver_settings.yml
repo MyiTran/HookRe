@@ -1,7 +1,13 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
+  route_key: "default"
   response_mode: "200"
+  status_code: 200
+  delay_seconds: 0
 
 two:
+  route_key: "failure"
   response_mode: "500"
+  status_code: 500
+  delay_seconds: 0

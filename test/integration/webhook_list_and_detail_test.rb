@@ -39,8 +39,8 @@ class WebhookListAndDetailTest < ActionDispatch::IntegrationTest
     pos_older = response.body.index("wh_older")
     assert pos_newer < pos_older, "Expected newest webhook to appear first in HTML"
 
-    assert_select ".badge-sig-verified", text: "Signature verified"
-    assert_select ".badge-sig-invalid", text: "Signature invalid"
+    assert_select ".badge-sig-verified", text: "Verified"
+    assert_select ".badge-sig-invalid", text: "Invalid signature"
     assert_select ".badge-status-2xx", text: "Responded 200 OK"
     assert_select ".badge-status-4xx", text: "Responded 401 Unauthorized"
     assert_includes response.body, "GMT+7"
@@ -67,7 +67,7 @@ class WebhookListAndDetailTest < ActionDispatch::IntegrationTest
     get webhook_detail_path(webhook)
     assert_response :success
 
-    assert_select ".badge-sig-invalid", text: "Signature invalid"
+    assert_select ".badge-sig-invalid", text: "Invalid signature"
     assert_select ".badge-status-4xx", text: "Responded 401 Unauthorized"
     assert_select "td", text: /Message timestamp too old/
     assert_select "code", text: "wh_detail_test"

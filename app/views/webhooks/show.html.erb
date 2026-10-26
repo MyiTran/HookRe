@@ -14,24 +14,25 @@
     <tr>
       <th>Signature Verification</th>
       <td>
-        <% if @webhook.verified? %>
-          <span class="badge badge-sig-verified">Signature verified</span>
-        <% elsif @webhook.rejected? %>
-          <span class="badge badge-sig-invalid">Signature invalid</span>
-          <% if @webhook.verification_error.present? %>
-            <div style="margin-top: 4px; color: var(--danger-text); font-size: 0.85rem;">
-              <strong>Reason:</strong> <%= @webhook.verification_error %>
-            </div>
-          <% end %>
-        <% else %>
-          <span class="badge badge-unconfigured">Unverified</span>
+        <span class="badge <%= @webhook.signature_status_badge_class %>"><%= @webhook.signature_status_text %></span>
+        <% if @webhook.rejected? && @webhook.verification_error.present? %>
+          <div style="margin-top: 4px; color: var(--danger-text); font-size: 0.85rem;">
+            <strong>Reason:</strong> <%= @webhook.verification_error %>
+          </div>
         <% end %>
       </td>
+    </tr>
+    <tr>
+      <th>Receiver Path</th>
+      <td><code><%= @webhook.display_receiver_path %></code></td>
     </tr>
     <tr>
       <th>Response Status</th>
       <td>
         <span class="badge <%= @webhook.response_status_badge_class %>"><%= @webhook.response_status_text %></span>
+        <% if @webhook.delayed? %>
+          <span class="badge badge-status-4xx" style="margin-left: 6px;">Delayed <%= @webhook.delay_seconds %>s</span>
+        <% end %>
       </td>
     </tr>
     <tr>

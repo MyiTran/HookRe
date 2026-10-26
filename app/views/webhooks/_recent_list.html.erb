@@ -5,22 +5,25 @@
         <li class="webhook-item">
           <div class="webhook-item-header">
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <% if webhook.verified? %>
-                <span class="badge badge-sig-verified">Signature verified</span>
-              <% elsif webhook.rejected? %>
-                <span class="badge badge-sig-invalid">Signature invalid</span>
-              <% else %>
-                <span class="badge badge-unconfigured">Unverified</span>
-              <% end %>
-
+              <span class="badge <%= webhook.signature_status_badge_class %>"><%= webhook.signature_status_text %></span>
               <span class="badge <%= webhook.response_status_badge_class %>"><%= webhook.response_status_text %></span>
+
+              <% if webhook.delayed? %>
+                <% if webhook.delay_seconds >= 15 %>
+                  <span class="badge badge-status-4xx" title="Configured delay may trigger sender timeout">Delayed response — sender may time out (<%= webhook.delay_seconds %>s)</span>
+                <% else %>
+                  <span class="badge badge-unconfigured">Delayed <%= webhook.delay_seconds %>s</span>
+                <% end %>
+              <% end %>
             </div>
             <div style="margin-left: auto; flex-shrink: 0; padding-left: 8px;">
               <%= link_to "View Detail →", webhook_detail_path(webhook), style: "color: var(--primary); text-decoration: none; font-weight: 600; white-space: nowrap;" %>
             </div>
           </div>
-          <div style="font-size: 0.85rem; color: var(--text-color); margin-bottom: 4px;">
-            <strong>Received:</strong> <%= webhook.formatted_received_at %>
+          <div style="font-size: 0.85rem; color: var(--text-color); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span><strong>Received:</strong> <%= webhook.formatted_received_at %></span>
+            <span style="color: var(--text-muted);">•</span>
+            <span><strong>Path:</strong> <code><%= webhook.display_receiver_path %></code></span>
           </div>
           <div class="webhook-item-title">
             <% if webhook.event_type.present? %>
@@ -39,7 +42,7 @@
     </ul>
   <% else %>
     <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 24px 0;">
-      No webhooks received yet. Send events from HookYard to <code>/webhook</code> to inspect them here.
+      No webhooks received yet. Send events from HookYard to inspect them here.
     </p>
   <% end %>
 </div>
