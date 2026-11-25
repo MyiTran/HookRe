@@ -10,7 +10,8 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_26_145533) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_26_155455) do
+
   create_table "received_webhooks", force: :cascade do |t|
     t.string "request_id"
     t.string "webhook_id"
@@ -25,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_145533) do
     t.integer "response_status"
     t.string "receiver_path"
     t.integer "delay_seconds", default: 0
+    t.integer "scenario_step"
     t.index ["receiver_path"], name: "index_received_webhooks_on_receiver_path"
   end
 
@@ -36,6 +38,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_26_145533) do
     t.integer "status_code", default: 200, null: false
     t.integer "delay_seconds", default: 0, null: false
     t.text "response_body"
+    t.string "scenario_mode", default: "static", null: false
+    t.integer "scenario_threshold", default: 2, null: false
+    t.integer "request_count", default: 0, null: false
+    t.text "sequence_steps", default: "[]", null: false
+    t.integer "sequence_index", default: 0, null: false
     t.index ["route_key"], name: "index_receiver_settings_on_route_key", unique: true
   end
+
 end

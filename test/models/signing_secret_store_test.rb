@@ -17,38 +17,51 @@ class SigningSecretStoreTest < ActiveSupport::TestCase
   end
 
   test "unconfigured by default when ENV is empty" do
-    assert_not SigningSecretStore.configured?
-    assert_nil SigningSecretStore.secret
+    assert_not SigningSecretStore.configured_for?("success")
+    assert_nil SigningSecretStore.secret_for("success")
   end
 
-  test "uses HOOKYARD_SIGNING_SECRET ENV by default if set" do
+  test "uses HOOKYARD_SIGNING_SECRET only for the default route" do
     ENV["HOOKYARD_SIGNING_SECRET"] = "whsec_from_env_123"
-    assert SigningSecretStore.configured?
-    assert_equal "whsec_from_env_123", SigningSecretStore.secret
+
+    assert SigningSecretStore.configured_for?("default")
+    assert_equal "whsec_from_env_123", SigningSecretStore.secret_for("default")
+    assert_not SigningSecretStore.configured_for?("success")
+    assert_nil SigningSecretStore.secret_for("success")
   end
 
-  test "UI-set secret overrides ENV" do
-    ENV["HOOKYARD_SIGNING_SECRET"] = "whsec_from_env_123"
-    SigningSecretStore.set("whsec_manual_456")
-    assert SigningSecretStore.configured?
-    assert_equal "whsec_manual_456", SigningSecretStore.secret
+  test "stores secrets independently by allowlisted route" do
+    SigningSecretStore.set(route_key: "success", value: "whsec_success")
+    SigningSecretStore.set(route_key: "failure", value: "whsec_failure")
+
+    assert_equal "whsec_success", SigningSecretStore.secret_for("success")
+    assert_equal "whsec_failure", SigningSecretStore.secret_for("failure")
+    assert_nil SigningSecretStore.secret_for("slow")
   end
 
-  test "clearing secret clears even when ENV is set" do
-    ENV["HOOKYARD_SIGNING_SECRET"] = "whsec_from_env_123"
-    SigningSecretStore.set("whsec_manual_456")
-    SigningSecretStore.clear
+  test "clearing one route does not affect another route" do
+    SigningSecretStore.set(route_key: "success", value: "whsec_success")
+    SigningSecretStore.set(route_key: "failure", value: "whsec_failure")
+    SigningSecretStore.clear(route_key: "success")
 
-    assert_not SigningSecretStore.configured?
-    assert_nil SigningSecretStore.secret
+    assert_not SigningSecretStore.configured_for?("success")
+    assert SigningSecretStore.configured_for?("failure")
+    assert_equal "whsec_failure", SigningSecretStore.secret_for("failure")
   end
 
-  test "setting blank secret clears the manual secret" do
-    SigningSecretStore.set("whsec_manual_456")
-    SigningSecretStore.set("   ")
+  test "rejects a route outside the allowlist" do
+    assert_raises(ArgumentError) do
+      SigningSecretStore.set(route_key: "other", value: "whsec_value")
+    end
+  end
 
-    assert_not SigningSecretStore.configured?
-    assert_nil SigningSecretStore.secret
+  test "setting blank secret clears only its route" do
+    SigningSecretStore.set(route_key: "success", value: "whsec_success")
+    SigningSecretStore.set(route_key: "failure", value: "whsec_failure")
+    SigningSecretStore.set(route_key: "success", value: "   ")
+
+    assert_not SigningSecretStore.configured_for?("success")
+    assert_equal "whsec_failure", SigningSecretStore.secret_for("failure")
   end
 end
 

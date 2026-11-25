@@ -8,6 +8,10 @@
               <span class="badge <%= webhook.signature_status_badge_class %>"><%= webhook.signature_status_text %></span>
               <span class="badge <%= webhook.response_status_badge_class %>"><%= webhook.response_status_text %></span>
 
+              <% if webhook.scenario_step? %>
+                <span class="badge badge-unconfigured" style="border: 1px dashed var(--primary); color: var(--primary); font-weight: 600;"><%= webhook.scenario_step_text %></span>
+              <% end %>
+
               <% if webhook.delayed? %>
                 <% if webhook.delay_seconds >= 15 %>
                   <span class="badge badge-status-4xx" title="Configured delay may trigger sender timeout">Delayed response — sender may time out (<%= webhook.delay_seconds %>s)</span>

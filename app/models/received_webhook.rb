@@ -55,6 +55,14 @@ class ReceivedWebhook < ApplicationRecord
     delay_seconds.to_i > 0
   end
 
+  def scenario_step?
+    scenario_step.present? && scenario_step.to_i > 0
+  end
+
+  def scenario_step_text
+    "Scenario step #{scenario_step}"
+  end
+
   def display_receiver_path
     receiver_path.presence || "/webhook"
   end

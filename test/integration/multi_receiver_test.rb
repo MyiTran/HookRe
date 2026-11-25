@@ -6,7 +6,9 @@ class MultiReceiverTest < ActionDispatch::IntegrationTest
 
   setup do
     SigningSecretStore.reset_to_default!
-    SigningSecretStore.set(TEST_SECRET)
+    %w[success failure slow custom].each do |route|
+      SigningSecretStore.set(route_key: route, value: TEST_SECRET)
+    end
     ReceivedWebhook.delete_all
   end
 
@@ -164,8 +166,8 @@ class MultiReceiverTest < ActionDispatch::IntegrationTest
     assert_equal 2, ReceivedWebhook.for_route("all").count
   end
 
-  test "unconfigured signing secret on multi-receiver route responds with configured status and Not verified result" do
-    SigningSecretStore.clear
+  test "unconfigured signing secret on multi-receiver route fails closed" do
+    SigningSecretStore.clear(route_key: "success")
 
     post "/webhooks/success",
       params: '{"event":"unverified.test"}',
@@ -175,12 +177,10 @@ class MultiReceiverTest < ActionDispatch::IntegrationTest
         "HTTP_WEBHOOK_TIMESTAMP" => Time.now.to_i.to_s
       }
 
-    assert_response :ok
+    assert_response :service_unavailable
     webhook = ReceivedWebhook.last
-    assert_equal "not_verified", webhook.verification_status
-    assert_equal "Not verified", webhook.signature_status_text
-    assert_equal "badge-unconfigured", webhook.signature_status_badge_class
-    assert_equal 200, webhook.response_status
+    assert_equal "rejected", webhook.verification_status
+    assert_equal 503, webhook.response_status
   end
 
   test "invalid signature on multi-receiver route returns 401 and is marked Invalid signature" do

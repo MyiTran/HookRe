@@ -36,7 +36,7 @@ class WebhooksController < ApplicationController
     verification_status = ReceivedWebhook::STATUS_NOT_VERIFIED
     verification_error = nil
 
-    if SigningSecretStore.configured?
+    if SigningSecretStore.configured_for?(route_key)
       verification_headers = {
         "webhook-id" => stored_headers["webhook-id"],
         "webhook-timestamp" => stored_headers["webhook-timestamp"],
@@ -44,7 +44,7 @@ class WebhooksController < ApplicationController
       }
 
       verified = false
-      SigningSecretStore.secrets.each do |sec|
+      SigningSecretStore.secrets_for(route_key).each do |sec|
         begin
           wh = StandardWebhooks::Webhook.new(sec)
           parsed_body = wh.verify(raw_body, verification_headers)
@@ -61,8 +61,7 @@ class WebhooksController < ApplicationController
       else
         verification_status = ReceivedWebhook::STATUS_REJECTED
       end
-    elsif request.path == "/webhook"
-      # Legacy endpoint without configured secret returns 503
+    else
       @received_webhook = ReceivedWebhook.create!(
         request_id: request_id,
         webhook_id: webhook_id,
@@ -71,15 +70,12 @@ class WebhooksController < ApplicationController
         body: raw_body,
         received_at: Time.current,
         verification_status: ReceivedWebhook::STATUS_REJECTED,
-        verification_error: "Endpoint signing secret is not configured in HookRe",
+        verification_error: "Endpoint signing secret is not configured for this receiver route",
         response_status: 503,
         receiver_path: request.path,
         delay_seconds: 0
       )
-      return render json: { error: "Endpoint signing secret is not configured" }, status: :service_unavailable
-    else
-      verification_status = ReceivedWebhook::STATUS_NOT_VERIFIED
-      verification_error = "Endpoint signing secret is not configured in HookRe"
+      return render json: { error: "Endpoint signing secret is not configured for this receiver route" }, status: :service_unavailable
     end
 
     # 2. Determine event_type & fallback IDs
@@ -103,9 +99,14 @@ class WebhooksController < ApplicationController
     if verification_status == ReceivedWebhook::STATUS_REJECTED
       response_status = 401
       delay_seconds = 0
+      custom_body = nil
+      scenario_step = nil
     else
-      response_status = setting.status_code
-      delay_seconds = setting.delay_seconds.to_i
+      resolved_info = setting.resolve_next_response!
+      response_status = resolved_info[:status_code]
+      delay_seconds = resolved_info[:delay_seconds]
+      custom_body = resolved_info[:response_body]
+      scenario_step = resolved_info[:scenario_step]
     end
 
     # 4. Store received webhook
@@ -120,7 +121,8 @@ class WebhooksController < ApplicationController
       verification_error: verification_error,
       response_status: response_status,
       receiver_path: request.path,
-      delay_seconds: delay_seconds
+      delay_seconds: delay_seconds,
+      scenario_step: scenario_step
     )
 
     # 5. Delay before returning response if configured
@@ -130,17 +132,14 @@ class WebhooksController < ApplicationController
 
     # 6. Rejected requests always return 401
     if verification_status == ReceivedWebhook::STATUS_REJECTED
-      return render json: {
-        error: "Webhook signature verification failed",
-        detail: verification_error
-      }, status: :unauthorized
+      return render json: { error: "Webhook signature verification failed" }, status: :unauthorized
     end
 
     # 7. Return configured response
     if response_status == 204
       head :no_content
-    elsif setting.response_body.present?
-      body = setting.response_body
+    elsif custom_body.present?
+      body = custom_body
       is_json = body.strip.start_with?("{", "[") rescue false
       render plain: body, status: response_status, content_type: (is_json ? "application/json" : "text/plain")
     elsif setting.response_mode == "large"
@@ -152,15 +151,21 @@ class WebhooksController < ApplicationController
     elsif response_status >= 500
       render json: {
         error: Rack::Utils::HTTP_STATUS_CODES[response_status] || "Internal server error",
-        webhook_id: @received_webhook.id
-      }, status: response_status
+        webhook_id: @received_webhook.id,
+        scenario_note: resolved_info[:scenario_note]
+      }.compact, status: response_status
     elsif response_status >= 400
       render json: {
         error: Rack::Utils::HTTP_STATUS_CODES[response_status] || "Client error",
-        webhook_id: @received_webhook.id
-      }, status: response_status
+        webhook_id: @received_webhook.id,
+        scenario_note: resolved_info[:scenario_note]
+      }.compact, status: response_status
     else
-      render json: { received: true, webhook_id: @received_webhook.id }, status: response_status
+      render json: {
+        received: true,
+        webhook_id: @received_webhook.id,
+        scenario_note: resolved_info[:scenario_note]
+      }.compact, status: response_status
     end
   end
 

@@ -59,7 +59,7 @@ Follow this exact step-by-step checklist to test HookYard Phase 5:
    - **Event types**: Subscribe to `order.created` or `*`.
 6. Copy the one-time Endpoint signing secret displayed by HookYard (format: `whsec_...`).
 7. Open HookRe at [http://localhost:3001](http://localhost:3001). Under the **Receiver** card, paste the secret into the **Endpoint Signing Secret** field and click **Save Secret**. Verify the badge displays **Configured**.
-   *(Note: The secret is stored strictly in memory for the running process and is never persisted to database, cookies, or logs. You can also specify `HOOKYARD_SIGNING_SECRET=whsec_...` at boot.)*
+   *(Note: Secrets are stored strictly in memory for the running Rails process, per receiver route, and are never persisted to database, cookies, or logs. This is a process-local store: it is not shared across Rails workers/processes, so use a single worker for multi-route secret testing. You can also specify `HOOKYARD_SIGNING_SECRET=whsec_...` at boot for the default route.)*
 
 ### 3. Send Event & Verify Delivery
 8. Copy your HookYard **Project API Token** into the HookRe **Sender** form.
@@ -122,4 +122,10 @@ Run the full HookRe test suite:
 
 ```bash
 bin/rails test
+```
+
+Run the signing-secret badge JavaScript unit tests:
+
+```bash
+node --test test/javascript/receiver_secret_badges.test.js
 ```

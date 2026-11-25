@@ -32,31 +32,32 @@ class SettingsTest < ActionDispatch::IntegrationTest
     assert_select ".flash-alert", text: /Invalid response mode/
   end
 
-  test "POST /signing_secret sets signing secret in memory" do
-    assert_not SigningSecretStore.configured?
+  test "POST receiver secret sets only the selected route in memory" do
+    assert_not SigningSecretStore.configured_for?("success")
 
-    post signing_secret_path, params: { signing_secret: "whsec_test_secret_abc123" }
-    assert_redirected_to root_path
+    post receiver_secret_path("success"), params: { signing_secret: "whsec_test_secret_abc123" }
+    assert_redirected_to root_path(route: "success")
     follow_redirect!
 
-    assert SigningSecretStore.configured?
-    assert_equal "whsec_test_secret_abc123", SigningSecretStore.secret
+    assert SigningSecretStore.configured_for?("success")
+    assert_not SigningSecretStore.configured_for?("failure")
     assert_select ".badge-verified", text: "Configured"
 
     # Ensure secret is NOT in rendered HTML
     assert_no_match(/whsec_test_secret_abc123/, response.body)
   end
 
-  test "DELETE /signing_secret clears signing secret" do
-    SigningSecretStore.set("whsec_to_be_cleared")
-    assert SigningSecretStore.configured?
+  test "DELETE receiver secret clears only the selected route" do
+    SigningSecretStore.set(route_key: "success", value: "whsec_to_be_cleared")
+    SigningSecretStore.set(route_key: "failure", value: "whsec_other_route")
+    assert SigningSecretStore.configured_for?("success")
 
-    delete clear_signing_secret_path
-    assert_redirected_to root_path
+    delete clear_receiver_secret_path("success")
+    assert_redirected_to root_path(route: "success")
     follow_redirect!
 
-    assert_not SigningSecretStore.configured?
-    assert_nil SigningSecretStore.secret
+    assert_not SigningSecretStore.configured_for?("success")
+    assert SigningSecretStore.configured_for?("failure")
     assert_select ".badge-rejected", text: "Not configured"
   end
 end

@@ -95,36 +95,11 @@
       Each receiver route can return a different response, so one HookYard event can be tested across multiple endpoints.
     </p>
 
-    <!-- Signing Secret Section -->
-    <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 16px;">
-      <div class="receiver-status-row" style="margin-bottom: 6px;">
-        <span><strong>Endpoint Signing Secret:</strong></span>
-        <% if SigningSecretStore.configured? %>
-          <span id="signing-secret-status" class="badge badge-verified badge-sig-verified">Configured</span>
-        <% else %>
-          <span id="signing-secret-status" class="badge badge-rejected badge-unconfigured">Not configured</span>
-        <% end %>
-      </div>
-
-      <div class="hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
-        Format: <code>whsec_...</code> from HookYard. Stored in browser localStorage for persistent local testing.
-      </div>
-
-      <%= form_with url: signing_secret_path, method: :post, local: true, id: "signing-secret-form", html: { style: "display: flex; gap: 8px; align-items: center;" } do %>
-        <%= password_field_tag :signing_secret, "", id: "signing-secret-input", placeholder: "Enter whsec_...", class: "form-control", autocomplete: "off", style: "flex: 1;" %>
-        <%= submit_tag "Save Secret", class: "btn btn-sm btn-primary" %>
-      <% end %>
-
-      <div style="margin-top: 6px; text-align: right;">
-        <%= button_to "Clear Secret", clear_signing_secret_path, method: :delete, id: "clear-signing-secret-btn", class: "btn btn-sm btn-outline", style: "color: var(--danger-text);" %>
-      </div>
-    </div>
-
     <!-- ROUTE SELECTOR TABS -->
     <div class="route-nav-tabs" role="tablist">
-      <% @receiver_routes.each_with_index do |key, idx| %>
+      <% @receiver_routes.each do |key| %>
         <% setting = @route_settings[key] %>
-        <button type="button" class="route-nav-tab <%= 'active' if idx == 0 %>" data-route-tab="<%= key %>">
+        <button type="button" class="route-nav-tab <%= 'active' if key == @active_route %>" data-route-tab="<%= key %>">
           <span><%= setting.route_label.split(" ").first %></span>
           <span class="badge <%= setting.active_badge_class %>" style="font-size: 0.65rem; padding: 1px 5px;">
             <%= setting.status_code %>
@@ -139,9 +114,9 @@
     </div>
 
     <!-- ROUTE CONFIGURATION PANELS -->
-    <% @receiver_routes.each_with_index do |key, idx| %>
+    <% @receiver_routes.each do |key| %>
       <% setting = @route_settings[key] %>
-      <div class="route-panel <%= 'active' if idx == 0 %>" id="panel-<%= key %>">
+      <div class="route-panel <%= 'active' if key == @active_route %>" id="panel-<%= key %>">
         <!-- Route URL & Active Banner Box -->
         <div class="route-endpoint-box">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
@@ -151,7 +126,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <span class="badge <%= setting.active_badge_class %>"><%= setting.active_status_text %></span>
-              <% if setting.delay_label %>
+              <% if setting.delay_label && setting.fixed_mode? %>
                 <span class="badge badge-unconfigured"><%= setting.delay_label %></span>
               <% end %>
             </div>
@@ -161,59 +136,162 @@
           </div>
         </div>
 
-        <!-- Presets -->
-        <div style="margin-bottom: 16px;">
-          <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Status Presets:</div>
-          <div class="preset-buttons">
-            <% [
-                 [200, "200 OK", "badge-status-2xx"],
-                 [400, "400 Bad Request", "badge-status-4xx"],
-                 [408, "408 Request Timeout", "badge-status-4xx"],
-                 [429, "429 Too Many Requests", "badge-status-4xx"],
-                 [500, "500 Internal Server Error", "badge-status-5xx"],
-                 [503, "503 Service Unavailable", "badge-status-5xx"]
-               ].each do |code, label, badge_style| %>
-              <%= button_to label, update_receiver_setting_path(route_key: key, status_code: code),
-                  method: :post,
-                  class: "btn btn-sm #{setting.status_code == code ? 'btn-primary' : 'btn-outline'}",
-                  style: "font-size: 0.8rem; padding: 4px 10px;" %>
+        <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+          <div class="receiver-status-row" style="margin-bottom: 6px;">
+            <span><strong>Endpoint Signing Secret:</strong></span>
+            <% if SigningSecretStore.configured_for?(key) %>
+              <span class="badge badge-verified badge-sig-verified" data-receiver-secret-badge="<%= key %>">Configured</span>
+            <% else %>
+              <span class="badge badge-rejected badge-unconfigured" data-receiver-secret-badge="<%= key %>">Not configured</span>
+            <% end %>
+          </div>
+          <div class="hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
+            Use the signing secret of the HookYard Endpoint targeting <code><%= setting.route_path %></code>.
+            Secrets are stored in this Rails process only (single worker); they are not shared across processes or persisted.
+          </div>
+          <%= form_with url: receiver_secret_path(key), method: :post, local: true,
+              html: { style: "display: flex; gap: 8px; align-items: center; flex-wrap: wrap;", data: { receiver_secret_form: key, receiver_route_key: key, receiver_secret_storage_key: "hookre_endpoint_signing_secret_#{key}", server_configured: SigningSecretStore.configured_for?(key) } } do %>
+            <%= password_field_tag :signing_secret, "", placeholder: "Enter whsec_...", class: "form-control receiver-secret-input", autocomplete: "new-password", style: "flex: 1; min-width: 140px;" %>
+            <%= submit_tag "Save Secret", class: "btn btn-sm btn-primary" %>
+          <% end %>
+          <div style="margin-top: 6px; text-align: right;">
+            <button type="button"
+                class="btn btn-sm btn-outline clear-receiver-secret-btn"
+                data-receiver-route-key="<%= key %>"
+                data-receiver-secret-storage-key="hookre_endpoint_signing_secret_<%= key %>"
+                data-clear-receiver-secret-url="<%= clear_receiver_secret_path(key) %>"
+                style="color: var(--danger-text);">Clear Secret</button>
+          </div>
+        </div>
+
+        <!-- RESPONSE MODE SWITCHER TABS: Fixed vs Sequence -->
+        <div class="scenario-mode-tabs" role="tablist">
+          <button type="button" class="scenario-mode-tab <%= 'active' if setting.fixed_mode? %>" data-mode-tab="<%= key %>" data-target-mode="fixed">
+            Fixed Response
+          </button>
+          <button type="button" class="scenario-mode-tab <%= 'active' if setting.sequence_mode? %>" data-mode-tab="<%= key %>" data-target-mode="sequence">
+            Response Sequence
+          </button>
+        </div>
+
+        <!-- 1. FIXED RESPONSE CONTROLS (Displayed when Fixed is active) -->
+        <div class="scenario-panel <%= 'active' if setting.fixed_mode? %>" id="fixed-controls-<%= key %>">
+          <!-- Presets -->
+          <div style="margin-bottom: 14px;">
+            <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">Status Presets:</div>
+            <div class="preset-buttons">
+              <% [
+                   [200, "200 OK"],
+                   [400, "400 Bad Request"],
+                   [408, "408 Request Timeout"],
+                   [429, "429 Too Many Requests"],
+                   [500, "500 Internal Server Error"],
+                   [503, "503 Service Unavailable"]
+                 ].each do |code, label| %>
+                <%= button_to label, update_receiver_setting_path(route_key: key, status_code: code, response_mode: "fixed"),
+                    method: :post,
+                    class: "btn btn-sm #{setting.status_code == code && setting.fixed_mode? ? 'btn-primary' : 'btn-outline'}",
+                    style: "font-size: 0.8rem; padding: 4px 10px;" %>
+              <% end %>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
+            <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">
+              Fixed Response for <%= setting.route_label %>
+            </h4>
+
+            <%= form_with url: update_receiver_setting_path, method: :post, local: true do %>
+              <%= hidden_field_tag :route_key, key %>
+              <%= hidden_field_tag :response_mode, "fixed" %>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="status_code_<%= key %>">Custom HTTP Status (100–599)</label>
+                  <%= number_field_tag :status_code, setting.status_code, min: 100, max: 599, required: true, id: "status_code_#{key}", class: "form-control" %>
+                  <div class="hint">Returns exact HTTP code</div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label for="delay_seconds_<%= key %>">Response Delay (0–60s)</label>
+                  <%= number_field_tag :delay_seconds, setting.delay_seconds, min: 0, max: 60, id: "delay_seconds_#{key}", class: "form-control" %>
+                  <div class="hint">Delay &gt; 15s triggers HookYard timeout</div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="response_body_<%= key %>">Response Body (Optional, max 2 KB)</label>
+                <%= text_area_tag :response_body, setting.response_body, rows: 2, maxlength: 2048, id: "response_body_#{key}", placeholder: 'Default: {"received": true}', class: "form-control code" %>
+                <div class="hint">Custom JSON or plain text body to return</div>
+              </div>
+
+              <div style="text-align: right;">
+                <%= submit_tag "Save Fixed Settings", class: "btn btn-sm btn-primary" %>
+              </div>
             <% end %>
           </div>
         </div>
 
-        <!-- Fine-Grained Route Configuration Form -->
-        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
-          <h4 style="font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: var(--text-color);">
-            Configure Response Details for <%= setting.route_label %>
-          </h4>
+        <!-- 2. RESPONSE SEQUENCE CONTROLS (Displayed when Sequence is active) -->
+        <div class="scenario-panel <%= 'active' if setting.sequence_mode? %>" id="sequence-controls-<%= key %>">
+          <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+              <div>
+                <h4 style="font-size: 0.9rem; font-weight: 600; margin: 0; color: var(--text-color);">
+                  Response Sequence (1–20 Ordered Steps)
+                </h4>
+                <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                  Progress: <strong>Step <%= setting.parsed_steps.any? ? [setting.sequence_index + 1, setting.parsed_steps.size].min : 0 %> of <%= setting.parsed_steps.size %></strong>
+                  <% if setting.parsed_steps.any? && setting.sequence_index >= setting.parsed_steps.size - 1 %>
+                    <span class="badge badge-unconfigured" style="margin-left: 4px; font-size: 0.65rem;">Repeating final step</span>
+                  <% end %>
+                </div>
+              </div>
+              <div>
+                <%= button_to "Reset scenario progress", reset_sequence_progress_path(route_key: key), method: :post,
+                    class: "btn btn-sm btn-outline",
+                    style: "font-size: 0.75rem; padding: 2px 8px; color: var(--primary);" %>
+              </div>
+            </div>
 
-          <%= form_with url: update_receiver_setting_path, method: :post, local: true do %>
-            <%= hidden_field_tag :route_key, key %>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+              Each incoming webhook uses the next step in order. After the last step, the final step repeats until reset.
+            </p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="status_code_<%= key %>">Custom HTTP Status (100–599)</label>
-                <%= number_field_tag :status_code, setting.status_code, min: 100, max: 599, required: true, id: "status_code_#{key}", class: "form-control" %>
-                <div class="hint">Returns exact HTTP code</div>
+            <%= form_with url: update_receiver_setting_path, method: :post, local: true, id: "sequence-form-#{key}" do %>
+              <%= hidden_field_tag :route_key, key %>
+              <%= hidden_field_tag :response_mode, "sequence" %>
+
+              <!-- Steps Container -->
+              <div class="steps-container" id="steps-container-<%= key %>" data-route="<%= key %>">
+                <% steps = setting.parsed_steps.presence || [{ "status_code" => 500, "delay_seconds" => 0 }, { "status_code" => 200, "delay_seconds" => 0 }] %>
+                <% steps.each_with_index do |st, s_idx| %>
+                  <div class="sequence-step-row" data-step-index="<%= s_idx %>">
+                    <span class="sequence-step-num">#<%= s_idx + 1 %></span>
+                    <div style="display: flex; gap: 6px; align-items: center; flex: 1;">
+                      <label style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">Status:</label>
+                      <input type="number" name="steps[][status_code]" value="<%= st['status_code'] %>" min="100" max="599" required class="form-control" style="width: 75px; font-size: 0.8rem; padding: 3px 6px;">
+
+                      <label style="font-size: 0.75rem; margin: 0; color: var(--text-muted); margin-left: 6px;">Delay:</label>
+                      <input type="number" name="steps[][delay_seconds]" value="<%= st['delay_seconds'] || 0 %>" min="0" max="60" class="form-control" style="width: 60px; font-size: 0.8rem; padding: 3px 6px;">
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">s</span>
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                      <input type="text" name="steps[][response_body]" value="<%= st['response_body'] %>" placeholder="Body (optional)" maxlength="2048" class="form-control" style="font-size: 0.8rem; padding: 3px 6px; max-width: 140px;">
+                      <button type="button" class="btn btn-sm btn-outline remove-step-btn" style="color: var(--danger-text); padding: 2px 6px; font-size: 0.75rem;" title="Remove step">✕</button>
+                    </div>
+                  </div>
+                <% end %>
               </div>
 
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="delay_seconds_<%= key %>">Response Delay (0–60s)</label>
-                <%= number_field_tag :delay_seconds, setting.delay_seconds, min: 0, max: 60, id: "delay_seconds_#{key}", class: "form-control" %>
-                <div class="hint">Delay &gt; 15s triggers HookYard timeout</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                <button type="button" class="btn btn-sm btn-outline add-step-btn" data-target="steps-container-<%= key %>" style="font-size: 0.8rem;">
+                  + Add response step
+                </button>
+                <%= submit_tag "Save Response Sequence", class: "btn btn-sm btn-primary" %>
               </div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label for="response_body_<%= key %>">Response Body (Optional, max 2 KB)</label>
-              <%= text_area_tag :response_body, setting.response_body, rows: 2, maxlength: 2048, id: "response_body_#{key}", placeholder: 'Default: {"received": true}', class: "form-control code" %>
-              <div class="hint">Custom JSON or plain text body to return</div>
-            </div>
-
-            <div style="text-align: right;">
-              <%= submit_tag "Save #{setting.route_label.split(' ').first} Settings", class: "btn btn-sm btn-primary" %>
-            </div>
-          <% end %>
+            <% end %>
+          </div>
         </div>
       </div>
     <% end %>
@@ -251,13 +329,13 @@
       </button>
     </div>
 
-    <!-- RECEIVED REQUESTS CONTAINER -->
     <div id="recent-webhooks-container">
       <%= render partial: "webhooks/recent_list", locals: { webhooks: @webhooks, webhook_count: @webhook_count, active_route: @active_route } %>
     </div>
   </section>
 </div>
 
+<%= javascript_include_tag "receiver_secret_badges" %>
 <script>
   (function() {
     // 1. Project API Token - Tab Session Persistence
@@ -324,66 +402,9 @@
       }
     }
 
-    // 2. Signing Secret - Persistent localStorage Sync
-    const SIGNING_SECRET_KEY = "hookre_endpoint_signing_secret";
-    const signingInput = document.getElementById("signing-secret-input");
-    const signingStatus = document.getElementById("signing-secret-status");
-    const clearSigningBtn = document.getElementById("clear-signing-secret-btn");
-    const signingForm = document.getElementById("signing-secret-form");
-
-    function updateSigningUi(isConfigured) {
-      if (signingStatus) {
-        if (isConfigured) {
-          signingStatus.textContent = "Configured";
-          signingStatus.className = "badge badge-sig-verified";
-        } else {
-          signingStatus.textContent = "Not configured";
-          signingStatus.className = "badge badge-unconfigured";
-        }
-      }
-    }
-
-    try {
-      const savedSecret = localStorage.getItem(SIGNING_SECRET_KEY);
-      if (savedSecret && savedSecret.trim().length > 0) {
-        if (signingInput) signingInput.value = savedSecret;
-        updateSigningUi(true);
-
-        // If server memory does not currently have the secret, sync in background
-        const serverConfigured = <%= SigningSecretStore.configured? ? 'true' : 'false' %>;
-        if (!serverConfigured) {
-          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-          fetch("<%= signing_secret_path %>", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              "X-CSRF-Token": csrfToken
-            },
-            body: "signing_secret=" + encodeURIComponent(savedSecret)
-          });
-        }
-      }
-    } catch (e) {}
-
-    if (signingForm) {
-      signingForm.addEventListener("submit", function() {
-        if (signingInput && signingInput.value.trim().length > 0) {
-          try {
-            localStorage.setItem(SIGNING_SECRET_KEY, signingInput.value.trim());
-          } catch (e) {}
-        }
-      });
-    }
-
-    if (clearSigningBtn) {
-      clearSigningBtn.addEventListener("click", function() {
-        try {
-          localStorage.removeItem(SIGNING_SECRET_KEY);
-        } catch (e) {}
-        if (signingInput) signingInput.value = "";
-        updateSigningUi(false);
-      });
-    }
+    // 2. Route-scoped signing secrets. The legacy global key is intentionally ignored.
+    const secretBadges = window.HookReReceiverSecretBadges;
+    if (secretBadges) secretBadges.initializeReceiverSecretUi();
 
     // 3. Receiver Route Selector Tabs (Left Panel)
     const routeTabs = document.querySelectorAll("[data-route-tab]");
@@ -399,7 +420,81 @@
       });
     });
 
-    // 4. Recent Requests Filter Tabs & Polling (Right Panel)
+    // 4. Scenario Mode Tabs (Fixed vs Sequence)
+    const scenarioTabs = document.querySelectorAll(".scenario-mode-tab");
+    scenarioTabs.forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        const routeKey = btn.getAttribute("data-mode-tab");
+        const mode = btn.getAttribute("data-target-mode");
+
+        document.querySelectorAll('.scenario-mode-tab[data-mode-tab="' + routeKey + '"]').forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+
+        const fixedPanel = document.getElementById("fixed-controls-" + routeKey);
+        const seqPanel = document.getElementById("sequence-controls-" + routeKey);
+        if (mode === "fixed") {
+          if (fixedPanel) fixedPanel.classList.add("active");
+          if (seqPanel) seqPanel.classList.remove("active");
+        } else {
+          if (fixedPanel) fixedPanel.classList.remove("active");
+          if (seqPanel) seqPanel.classList.add("active");
+        }
+      });
+    });
+
+    // 5. Sequence Steps Add/Remove Editor
+    document.addEventListener("click", function(e) {
+      if (e.target && e.target.classList.contains("add-step-btn")) {
+        const targetId = e.target.getAttribute("data-target");
+        const container = document.getElementById(targetId);
+        if (!container) return;
+
+        const rows = container.querySelectorAll(".sequence-step-row");
+        if (rows.length >= 20) {
+          alert("Maximum 20 steps per sequence.");
+          return;
+        }
+
+        const nextNum = rows.length + 1;
+        const newRow = document.createElement("div");
+        newRow.className = "sequence-step-row";
+        newRow.innerHTML = `
+          <span class="sequence-step-num">#${nextNum}</span>
+          <div style="display: flex; gap: 6px; align-items: center; flex: 1;">
+            <label style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">Status:</label>
+            <input type="number" name="steps[][status_code]" value="200" min="100" max="599" required class="form-control" style="width: 75px; font-size: 0.8rem; padding: 3px 6px;">
+
+            <label style="font-size: 0.75rem; margin: 0; color: var(--text-muted); margin-left: 6px;">Delay:</label>
+            <input type="number" name="steps[][delay_seconds]" value="0" min="0" max="60" class="form-control" style="width: 60px; font-size: 0.8rem; padding: 3px 6px;">
+            <span style="font-size: 0.75rem; color: var(--text-muted);">s</span>
+          </div>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="text" name="steps[][response_body]" value="" placeholder="Body (optional)" maxlength="2048" class="form-control" style="font-size: 0.8rem; padding: 3px 6px; max-width: 140px;">
+            <button type="button" class="btn btn-sm btn-outline remove-step-btn" style="color: var(--danger-text); padding: 2px 6px; font-size: 0.75rem;" title="Remove step">✕</button>
+          </div>
+        `;
+        container.appendChild(newRow);
+      }
+
+      if (e.target && e.target.classList.contains("remove-step-btn")) {
+        const row = e.target.closest(".sequence-step-row");
+        const container = row?.parentElement;
+        if (row && container) {
+          const allRows = container.querySelectorAll(".sequence-step-row");
+          if (allRows.length <= 1) {
+            alert("Sequence must contain at least 1 step.");
+            return;
+          }
+          row.remove();
+          container.querySelectorAll(".sequence-step-row").forEach((r, idx) => {
+            const numEl = r.querySelector(".sequence-step-num");
+            if (numEl) numEl.textContent = "#" + (idx + 1);
+          });
+        }
+      }
+    });
+
+    // 6. Recent Requests Filter Tabs & Polling (Right Panel)
     let currentRouteFilter = "<%= @active_route %>";
     let lastHtml = null;
 
@@ -446,7 +541,6 @@
       .catch(function() {});
     }
 
-    // Auto-refresh poll every 2 seconds
     setInterval(fetchRecentWebhooks, 2000);
   })();
 </script>

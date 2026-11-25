@@ -57,9 +57,15 @@ header.app-header h1 {
   color: var(--text-color);
 }
 
+header.app-header > div {
+  min-width: 0;
+  flex: 1;
+}
+
 header.app-header .tagline {
   color: var(--text-muted);
   font-size: 0.9rem;
+  word-break: break-word;
 }
 
 .flash-notice {
@@ -82,14 +88,14 @@ header.app-header .tagline {
 
 .main-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
 
 @media (max-width: 1024px) {
   .main-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 }
@@ -101,6 +107,8 @@ details.send-event-collapsible {
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 details.send-event-collapsible summary {
@@ -526,14 +534,45 @@ pre {
   font-weight: 600;
 }
 
+code {
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 480px) {
   body {
-    padding: 12px 8px;
+    padding: 12px 6px;
   }
 
   .card {
-    padding: 14px;
+    padding: 12px;
   }
+
+  .collapsible-subtitle {
+    display: none;
+  }
+
+  details.send-event-collapsible summary {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .send-event-body {
+    padding: 12px;
+  }
+
+  .scenario-mode-tab {
+    padding: 6px 4px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
 
   header.app-header {
     margin-bottom: 16px;
@@ -558,5 +597,78 @@ pre {
 
   .webhook-item-body {
     font-size: 0.75rem;
+  }
+}
+
+
+/* Scenario Mode Tabs (Fixed vs Sequence) */
+.scenario-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.scenario-mode-tab {
+  flex: 1;
+  text-align: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.scenario-mode-tab:hover {
+  color: var(--text-color);
+}
+
+.scenario-mode-tab.active {
+  background: #ffffff;
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.scenario-panel {
+  display: none;
+}
+
+.scenario-panel.active {
+  display: block;
+}
+
+/* Sequence Steps Editor */
+.sequence-step-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.sequence-step-num {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  min-width: 24px;
+}
+
+
+@media (max-width: 768px) {
+  .sequence-step-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
